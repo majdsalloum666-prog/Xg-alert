@@ -2,21 +2,56 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>xG Alert – Live Stats</title>
+  <title>xG Alert (Live)</title>
+
   <style>
-    body { font-family: Arial; text-align:center; padding-top:20px; }
-    #enableSoundBtn { font-size:18px; padding:10px 20px; margin-bottom:10px; }
-    #status { margin:10px 0; color:#555; }
-    #alertBox {
-      display:none; position:fixed; inset:0;
-      background:rgba(0,0,0,0.9); color:#fff; z-index:9999;
-      align-items:center; justify-content:center; flex-direction:column;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 20px;
     }
-    #alertBox h1 { font-size:26px; margin-bottom:8px; }
-    #alertBox p { font-size:18px; white-space:pre-line; }
-    #closeBtn { margin-top:16px; font-size:18px; padding:8px 20px; }
+
+    #enableSoundBtn {
+      font-size: 18px;
+      padding: 10px 20px;
+      margin-bottom: 10px;
+    }
+
+    #status {
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    #alertBox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      color: #fff;
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    #alertBox h1 {
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+
+    #alertBox p {
+      font-size: 18px;
+      white-space: pre-line;
+    }
+
+    #closeBtn {
+      margin-top: 16px;
+      font-size: 18px;
+      padding: 8px 20px;
+    }
   </style>
 </head>
+
 <body>
 
 <h2>xG Alert (Live)</h2>
@@ -26,7 +61,7 @@
 <div id="status">الحالة: بانتظار تفعيل الصوت</div>
 
 <div id="alertBox">
-  <h1>⚽ xG ALERT</h1>
+  <h1>⚽ ALERT</h1>
   <p id="alertText"></p>
   <button id="closeBtn">إغلاق</button>
 </div>
@@ -36,10 +71,15 @@
 </audio>
 
 <script>
-  // ===== إعدادات =====
-  const MIN_MINUTE = 30;
-  const MIN_XG = 1.5;
-  const CHECK_EVERY_MS = 30000; // كل 30 ثانية
+  /* ===== الإعدادات ===== */
+  const MIN_MINUTE_XG = 30;
+  const MIN_TOTAL_XG = 1.4;
+
+  const MIN_MINUTE_SOT = 25;
+  const MIN_SOT_SINGLE_TEAM = 5;
+
+  const CHECK_EVERY_MS = 30000;
+
   let alerted = false;
   let soundEnabled = false;
 
@@ -49,26 +89,26 @@
   const statusEl = document.getElementById("status");
   const enableSoundBtn = document.getElementById("enableSoundBtn");
 
-  // ===== تفعيل الصوت (لازم بعد كل فتح صفحة) =====
+  /* ===== تفعيل الصوت ===== */
   enableSoundBtn.onclick = () => {
     sound.play().then(() => {
-      sound.pause(); sound.currentTime = 0;
+      sound.pause();
+      sound.currentTime = 0;
       soundEnabled = true;
-      statusEl.textContent = "الحالة: الصوت مفعّل لهذه الجلسة";
-      alert("✅ الصوت مفعّل");
+      statusEl.textContent = "الحالة: الصوت مفعّل – جاري فحص المباريات";
+      alert("✅ تم تفعيل الصوت");
     });
   };
 
-  // ===== حساب xG التقديري =====
+  /* ===== معادلة xG المحسّنة ===== */
   function calcXG(shotsOnTarget, dangerousAttacks) {
-    return (shotsOnTarget * 0.35) + (dangerousAttacks / 25);
+    return (shotsOnTarget * 0.30) + (dangerousAttacks / 30);
   }
 
-  // ===== جلب إحصائيات حيّة (مثال مباراة واحدة) =====
-  async function fetchLiveStats() {
-    // مثال Endpoint عام عبر وسيط CORS (قد يتغير)
-    // يمكنك لاحقًا تبديل الـ URL لمصدر آخر مماثل
-    const url = "https://api.allorigins.win/raw?url=https://www.sofascore.com/api/v1/sport/football/events/live";
+  /* ===== جلب المباريات الحيّة ===== */
+  async function fetchLiveMatches() {
+    const url =
+      "https://api.allorigins.win/raw?url=https://www.sofascore.com/api/v1/sport/football/events/live";
     const res = await fetch(url);
     const data = await res.json();
     return data.events || [];
@@ -78,16 +118,14 @@
     if (alerted) return;
 
     try {
-      const events = await fetchLiveStats();
+      const events = await fetchLiveMatches();
       statusEl.textContent = `الحالة: فحص ${events.length} مباراة حيّة`;
 
       for (const ev of events) {
-        // تأكد من وجود الإحصائيات
         if (!ev.statistics) continue;
 
         const minute = ev.time?.current || 0;
 
-        // استخراج إحصائيات أساسية (قد تختلف المفاتيح)
         const homeSOT = ev.statistics.home?.shotsOnTarget ?? 0;
         const awaySOT = ev.statistics.away?.shotsOnTarget ?? 0;
         const homeDA  = ev.statistics.home?.dangerousAttacks ?? 0;
@@ -97,14 +135,28 @@
         const xgAway = calcXG(awaySOT, awayDA);
         const totalXG = xgHome + xgAway;
 
-        if (minute >= MIN_MINUTE && totalXG >= MIN_XG) {
+        /* ===== شرط التنبيه ===== */
+        const xgCondition =
+          minute >= MIN_MINUTE_XG && totalXG >= MIN_TOTAL_XG;
+
+        const sotCondition =
+          minute >= MIN_MINUTE_SOT &&
+          (homeSOT >= MIN_SOT_SINGLE_TEAM ||
+           awaySOT >= MIN_SOT_SINGLE_TEAM);
+
+        if (xgCondition || sotCondition) {
           alerted = true;
+
+          let reason = xgCondition
+            ? "📊 ضغط xG مرتفع"
+            : "🎯 تسديدات على المرمى مرتفعة";
 
           alertText.innerText =
             `${ev.homeTeam?.name} vs ${ev.awayTeam?.name}\n` +
-            `الدقيقة: ${minute}\n` +
-            `xG الفريق الأول: ${xgHome.toFixed(2)}\n` +
-            `xG الفريق الثاني: ${xgAway.toFixed(2)}\n` +
+            `الدقيقة: ${minute}\n\n` +
+            `${reason}\n\n` +
+            `Shots on Target: ${homeSOT} - ${awaySOT}\n` +
+            `xG: ${xgHome.toFixed(2)} - ${xgAway.toFixed(2)}\n` +
             `xG الإجمالي: ${totalXG.toFixed(2)}`;
 
           alertBox.style.display = "flex";
@@ -112,18 +164,18 @@
           break;
         }
       }
-    } catch (e) {
-      statusEl.textContent = "الحالة: خطأ في جلب الإحصائيات (أعد المحاولة)";
-      console.error(e);
+    } catch (err) {
+      statusEl.textContent = "الحالة: خطأ في جلب البيانات";
+      console.error(err);
     }
   }
 
-  // تشغيل دوري
   setInterval(checkMatches, CHECK_EVERY_MS);
 
   document.getElementById("closeBtn").onclick = () => {
     alertBox.style.display = "none";
-    sound.pause(); sound.currentTime = 0;
+    sound.pause();
+    sound.currentTime = 0;
   };
 </script>
 
