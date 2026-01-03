@@ -3,32 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <title>xG Alert</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding-top: 40px; }
+    #alertBox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    #alertBox h1 { font-size: 28px; margin-bottom: 10px; }
+    #alertBox p { font-size: 18px; }
+    #closeBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+    }
+  </style>
 </head>
 <body>
 
   <h2>xG Alert يعمل في الخلفية</h2>
-  <p>سيتم إرسال إشعارات عند تحقق شرط xG</p>
+  <p>تنبيه داخل الصفحة + صوت + اهتزاز</p>
 
-  <button id="notifyBtn">🔔 تفعيل الإشعارات</button>
+  <button id="testBtn">🔔 اختبار التنبيه</button>
+
+  <!-- صندوق التنبيه -->
+  <div id="alertBox">
+    <h1>⚽ xG ALERT</h1>
+    <p>تم تحقق الشرط بنجاح</p>
+    <button id="closeBtn">إغلاق</button>
+  </div>
+
+  <!-- صوت التنبيه -->
+  <audio id="alarmSound">
+    <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+  </audio>
 
   <script>
-    document.getElementById("notifyBtn").addEventListener("click", function () {
-      if (Notification.permission === "granted") {
-        new Notification("⚽ تنبيه xG", {
-          body: "تم تفعيل الإشعارات بنجاح ✅"
-        });
-      } else {
-        Notification.requestPermission().then(function (permission) {
-          if (permission === "granted") {
-            new Notification("⚽ تنبيه xG", {
-              body: "تم تفعيل الإشعارات بنجاح ✅"
-            });
-          } else {
-            alert("يجب السماح بالإشعارات لتعمل التنبيهات");
-          }
-        });
+    const alertBox = document.getElementById("alertBox");
+    const sound = document.getElementById("alarmSound");
+
+    document.getElementById("testBtn").onclick = () => {
+      alertBox.style.display = "flex";
+      sound.play();
+
+      if (navigator.vibrate) {
+        navigator.vibrate([500, 300, 500, 300, 500]);
       }
-    });
+    };
+
+    document.getElementById("closeBtn").onclick = () => {
+      alertBox.style.display = "none";
+      sound.pause();
+      sound.currentTime = 0;
+    };
   </script>
 
 </body>
