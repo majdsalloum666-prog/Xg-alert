@@ -13,4 +13,4 @@ async function checkMatches() {
   // سنربط xG الحقيقي هنا في الخطوة القادمة
 }
 
-setInterval(checkMatches, 60000);
+checkMatches();
