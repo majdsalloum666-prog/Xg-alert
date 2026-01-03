@@ -4,12 +4,16 @@
   <meta charset="UTF-8">
   <title>xG Alert</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding-top: 40px; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 40px;
+    }
     #alertBox {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.9);
       color: #fff;
       z-index: 9999;
       align-items: center;
@@ -20,42 +24,56 @@
     #alertBox p { font-size: 18px; }
     #closeBtn {
       margin-top: 20px;
-      padding: 10px 20px;
+      padding: 10px 25px;
       font-size: 18px;
     }
   </style>
 </head>
 <body>
 
-  <h2>xG Alert يعمل في الخلفية</h2>
-  <p>تنبيه داخل الصفحة + صوت + اهتزاز</p>
+  <h2>xG Alert يعمل تلقائيًا</h2>
+  <p>سيظهر تنبيه تلقائي عند تحقق الشرط</p>
 
-  <button id="testBtn">🔔 اختبار التنبيه</button>
-
-  <!-- صندوق التنبيه -->
   <div id="alertBox">
     <h1>⚽ xG ALERT</h1>
-    <p>تم تحقق الشرط بنجاح</p>
+    <p id="alertText"></p>
     <button id="closeBtn">إغلاق</button>
   </div>
 
-  <!-- صوت التنبيه -->
   <audio id="alarmSound">
     <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
   </audio>
 
   <script>
     const alertBox = document.getElementById("alertBox");
+    const alertText = document.getElementById("alertText");
     const sound = document.getElementById("alarmSound");
+    let alerted = false;
 
-    document.getElementById("testBtn").onclick = () => {
-      alertBox.style.display = "flex";
-      sound.play();
+    // ❗ بيانات تجريبية (سنستبدلها بـ xG حي)
+    let minute = 31;
+    let xgHome = 0.9;
+    let xgAway = 0.7;
 
-      if (navigator.vibrate) {
-        navigator.vibrate([500, 300, 500, 300, 500]);
+    function checkCondition() {
+      const totalXG = xgHome + xgAway;
+
+      if (!alerted && minute >= 30 && totalXG >= 1.5) {
+        alerted = true;
+
+        alertText.innerText =
+          `الدقيقة: ${minute}\n` +
+          `xG الفريق الأول: ${xgHome}\n` +
+          `xG الفريق الثاني: ${xgAway}\n` +
+          `xG الإجمالي: ${totalXG}`;
+
+        alertBox.style.display = "flex";
+        sound.play();
       }
-    };
+    }
+
+    // فحص تلقائي بعد 3 ثواني (للاختبار)
+    setTimeout(checkCondition, 3000);
 
     document.getElementById("closeBtn").onclick = () => {
       alertBox.style.display = "none";
