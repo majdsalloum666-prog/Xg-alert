@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>xG Alert – Live</title>
+  <title>xG Alert</title>
 
   <style>
     body {
@@ -29,15 +29,8 @@
       flex-direction: column;
     }
 
-    #alertBox h1 {
-      font-size: 26px;
-      margin-bottom: 10px;
-    }
-
-    #alertBox p {
-      font-size: 18px;
-      white-space: pre-line;
-    }
+    #alertBox h1 { font-size: 26px; }
+    #alertBox p { font-size: 18px; white-space: pre-line; }
 
     #closeBtn {
       margin-top: 20px;
@@ -52,17 +45,14 @@
 <h2>xG Alert</h2>
 <p>تنبيه تلقائي عند ضغط هجومي قوي</p>
 
-<!-- زر تفعيل الصوت (مرة واحدة فقط) -->
-<button id="enableSoundBtn">🔊 تفعيل الصوت (مرة واحدة)</button>
+<button id="enableSoundBtn">🔊 تفعيل الصوت (اضغط بعد فتح الصفحة)</button>
 
-<!-- صندوق التنبيه -->
 <div id="alertBox">
   <h1>⚽ xG ALERT</h1>
   <p id="alertText"></p>
   <button id="closeBtn">إغلاق</button>
 </div>
 
-<!-- صوت التنبيه -->
 <audio id="alarmSound">
   <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
 </audio>
@@ -76,25 +66,23 @@
   const alertText = document.getElementById("alertText");
   const enableSoundBtn = document.getElementById("enableSoundBtn");
 
-  // 🔊 تفعيل الصوت مرة واحدة
+  // يجب الضغط عليه بعد كل فتح صفحة
   enableSoundBtn.onclick = () => {
     sound.play().then(() => {
       sound.pause();
       sound.currentTime = 0;
       soundEnabled = true;
-      enableSoundBtn.style.display = "none";
-      alert("✅ تم تفعيل الصوت بنجاح");
+      alert("✅ الصوت مفعّل لهذه الجلسة");
     });
   };
 
-  // ===== بيانات تجريبية (سيتم استبدالها بـ xG حي لاحقًا) =====
+  // بيانات تجريبية
   let minute = 32;
   let shotsOnTargetHome = 4;
   let shotsOnTargetAway = 3;
   let dangerousAttacksHome = 38;
   let dangerousAttacksAway = 31;
 
-  // حساب xG تقديري
   function calculateXG(shotsOnTarget, dangerousAttacks) {
     return (shotsOnTarget * 0.35) + (dangerousAttacks / 25);
   }
@@ -121,7 +109,6 @@
     }
   }
 
-  // اختبار تلقائي بعد 4 ثواني
   setTimeout(checkMatch, 4000);
 
   document.getElementById("closeBtn").onclick = () => {
