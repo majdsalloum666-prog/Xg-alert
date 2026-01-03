@@ -3,74 +3,132 @@
 <head>
   <meta charset="UTF-8">
   <title>xG Alert – Live</title>
+
   <style>
-    body { font-family: Arial; text-align: center; padding-top: 30px; }
-    #alertBox {
-      display:none; position:fixed; inset:0;
-      background:rgba(0,0,0,0.9); color:#fff;
-      z-index:9999; align-items:center;
-      justify-content:center; flex-direction:column;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 30px;
     }
-    #alertBox h1 { font-size:26px; }
-    #alertBox p { font-size:18px; white-space:pre-line; }
-    #closeBtn { margin-top:20px; font-size:18px; padding:8px 20px; }
+
+    #enableSoundBtn {
+      font-size: 18px;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+    }
+
+    #alertBox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      color: #fff;
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    #alertBox h1 {
+      font-size: 26px;
+      margin-bottom: 10px;
+    }
+
+    #alertBox p {
+      font-size: 18px;
+      white-space: pre-line;
+    }
+
+    #closeBtn {
+      margin-top: 20px;
+      font-size: 18px;
+      padding: 8px 20px;
+    }
   </style>
 </head>
+
 <body>
 
-<h2>xG Alert (تقديري ذكي)</h2>
+<h2>xG Alert</h2>
 <p>تنبيه تلقائي عند ضغط هجومي قوي</p>
 
+<!-- زر تفعيل الصوت (مرة واحدة فقط) -->
+<button id="enableSoundBtn">🔊 تفعيل الصوت (مرة واحدة)</button>
+
+<!-- صندوق التنبيه -->
 <div id="alertBox">
-  <h1>⚽ فرصة قوية</h1>
+  <h1>⚽ xG ALERT</h1>
   <p id="alertText"></p>
   <button id="closeBtn">إغلاق</button>
 </div>
 
+<!-- صوت التنبيه -->
 <audio id="alarmSound">
   <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
 </audio>
 
 <script>
-let alerted = false;
+  let alerted = false;
+  let soundEnabled = false;
 
-// 🔴 بيانات حية تجريبية (سنربطها لاحقًا بمصدر إحصائيات)
-let minute = 32;
-let shotsOnTargetHome = 4;
-let shotsOnTargetAway = 3;
-let dangerousAttacksHome = 38;
-let dangerousAttacksAway = 31;
+  const sound = document.getElementById("alarmSound");
+  const alertBox = document.getElementById("alertBox");
+  const alertText = document.getElementById("alertText");
+  const enableSoundBtn = document.getElementById("enableSoundBtn");
 
-// 🧠 حساب xG التقديري
-function calculateXG(shotsOnTarget, dangerousAttacks) {
-  return (shotsOnTarget * 0.35) + (dangerousAttacks / 25);
-}
+  // 🔊 تفعيل الصوت مرة واحدة
+  enableSoundBtn.onclick = () => {
+    sound.play().then(() => {
+      sound.pause();
+      sound.currentTime = 0;
+      soundEnabled = true;
+      enableSoundBtn.style.display = "none";
+      alert("✅ تم تفعيل الصوت بنجاح");
+    });
+  };
 
-function checkMatch() {
-  const xgHome = calculateXG(shotsOnTargetHome, dangerousAttacksHome);
-  const xgAway = calculateXG(shotsOnTargetAway, dangerousAttacksAway);
-  const totalXG = xgHome + xgAway;
+  // ===== بيانات تجريبية (سيتم استبدالها بـ xG حي لاحقًا) =====
+  let minute = 32;
+  let shotsOnTargetHome = 4;
+  let shotsOnTargetAway = 3;
+  let dangerousAttacksHome = 38;
+  let dangerousAttacksAway = 31;
 
-  if (!alerted && minute >= 30 && totalXG >= 1.5) {
-    alerted = true;
-
-    document.getElementById("alertText").innerText =
-      `الدقيقة: ${minute}\n` +
-      `xG الفريق الأول: ${xgHome.toFixed(2)}\n` +
-      `xG الفريق الثاني: ${xgAway.toFixed(2)}\n` +
-      `xG الإجمالي: ${totalXG.toFixed(2)}`;
-
-    document.getElementById("alertBox").style.display = "flex";
-    document.getElementById("alarmSound").play();
+  // حساب xG تقديري
+  function calculateXG(shotsOnTarget, dangerousAttacks) {
+    return (shotsOnTarget * 0.35) + (dangerousAttacks / 25);
   }
-}
 
-// اختبار تلقائي بعد 4 ثواني
-setTimeout(checkMatch, 4000);
+  function checkMatch() {
+    const xgHome = calculateXG(shotsOnTargetHome, dangerousAttacksHome);
+    const xgAway = calculateXG(shotsOnTargetAway, dangerousAttacksAway);
+    const totalXG = xgHome + xgAway;
 
-document.getElementById("closeBtn").onclick = () => {
-  document.getElementById("alertBox").style.display = "none";
-};
+    if (!alerted && minute >= 30 && totalXG >= 1.5) {
+      alerted = true;
+
+      alertText.innerText =
+        `الدقيقة: ${minute}\n` +
+        `xG الفريق الأول: ${xgHome.toFixed(2)}\n` +
+        `xG الفريق الثاني: ${xgAway.toFixed(2)}\n` +
+        `xG الإجمالي: ${totalXG.toFixed(2)}`;
+
+      alertBox.style.display = "flex";
+
+      if (soundEnabled) {
+        sound.play();
+      }
+    }
+  }
+
+  // اختبار تلقائي بعد 4 ثواني
+  setTimeout(checkMatch, 4000);
+
+  document.getElementById("closeBtn").onclick = () => {
+    alertBox.style.display = "none";
+    sound.pause();
+    sound.currentTime = 0;
+  };
 </script>
 
 </body>
