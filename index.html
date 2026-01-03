@@ -2,10 +2,6 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-
-  <!-- إجبار GitHub Pages على index.html -->
-  <base href="./">
-
   <title>xG Alert</title>
 </head>
 <body>
@@ -13,8 +9,27 @@
   <h2>xG Alert يعمل في الخلفية</h2>
   <p>سيتم إرسال إشعارات عند تحقق شرط xG</p>
 
-  <button onclick="enableAlerts()">🔔 تفعيل الإشعارات</button>
+  <button id="notifyBtn">🔔 تفعيل الإشعارات</button>
 
-  <script src="./app.js"></script>
+  <script>
+    document.getElementById("notifyBtn").addEventListener("click", function () {
+      if (Notification.permission === "granted") {
+        new Notification("⚽ تنبيه xG", {
+          body: "تم تفعيل الإشعارات بنجاح ✅"
+        });
+      } else {
+        Notification.requestPermission().then(function (permission) {
+          if (permission === "granted") {
+            new Notification("⚽ تنبيه xG", {
+              body: "تم تفعيل الإشعارات بنجاح ✅"
+            });
+          } else {
+            alert("يجب السماح بالإشعارات لتعمل التنبيهات");
+          }
+        });
+      }
+    });
+  </script>
+
 </body>
 </html>
