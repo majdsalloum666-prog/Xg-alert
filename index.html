@@ -2,128 +2,14 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>xG Alert – TEST</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #f2f2f2;
-      padding: 20px;
-    }
-    button {
-      padding: 14px 22px;
-      font-size: 16px;
-      margin-top: 20px;
-      cursor: pointer;
-    }
-    #status {
-      margin-top: 20px;
-      font-size: 15px;
-      color: #333;
-    }
-  </style>
+  <title>xG Alert – Live</title>
 </head>
+<body style="font-family: Arial; text-align:center; padding:40px">
 
-<body>
+  <h1>xG Alert (Live)</h1>
+  <button id="notifyBtn">🔔 تفعيل الإشعارات</button>
+  <p id="status">الحالة: لم يبدأ بعد</p>
 
-  <h2>xG Alert – Test Mode</h2>
-  <p>نسخة اختبار للتنبيهات</p>
-
-  <button onclick="enableAlerts()">🔔 تفعيل الإشعارات</button>
-
-  <div id="status">الحالة: لم يبدأ بعد</div>
-
-  <audio id="sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
-
-<script>
-/* ======================
-   إعدادات الاختبار
-====================== */
-const TEST_MATCH = {
-  home: "Arsenal",
-  away: "Bournemouth",
-  minute: 38,
-  homeXG: 1.05,
-  awayXG: 0.55,
-  homeSOT: 6,
-  awaySOT: 2
-};
-
-let alerted = false;
-
-/* ======================
-   تفعيل الإشعارات
-====================== */
-function enableAlerts() {
-  if (Notification.permission === "granted") {
-    startTest();
-  } else {
-    Notification.requestPermission().then(p => {
-      if (p === "granted") startTest();
-      else alert("يجب السماح بالإشعارات");
-    });
-  }
-}
-
-/* ======================
-   بدء الاختبار
-====================== */
-function startTest() {
-  document.getElementById("status").innerText =
-    "الحالة: اختبار قيد التشغيل (سيأتي تنبيه خلال ثوانٍ)";
-
-  setTimeout(runTest, 4000);
-}
-
-/* ======================
-   إرسال إشعار
-====================== */
-function sendNotification(title, body) {
-  new Notification(title, {
-    body,
-    icon: "https://cdn-icons-png.flaticon.com/512/861/861512.png"
-  });
-
-  document.getElementById("sound").play();
-}
-
-/* ======================
-   منطق الاختبار
-====================== */
-function runTest() {
-  if (alerted) return;
-
-  const totalXG = TEST_MATCH.homeXG + TEST_MATCH.awayXG;
-
-  let reason = "";
-
-  if (TEST_MATCH.homeXG >= 1.0) {
-    reason = "🔥 xG لفريق واحد ≥ 1.0";
-  } else if (totalXG >= 1.5) {
-    reason = "📊 xG إجمالي مرتفع";
-  } else if (TEST_MATCH.homeSOT >= 5) {
-    reason = "🎯 تسديدات على المرمى عالية";
-  }
-
-  if (reason) {
-    alerted = true;
-
-    sendNotification(
-      "⚽ xG ALERT (TEST)",
-      `${TEST_MATCH.home} vs ${TEST_MATCH.away}
-الدقيقة: ${TEST_MATCH.minute}
-${reason}
-xG: ${TEST_MATCH.homeXG} - ${TEST_MATCH.awayXG}
-Shots on Target: ${TEST_MATCH.homeSOT} - ${TEST_MATCH.awaySOT}`
-    );
-
-    document.getElementById("status").innerText =
-      "✅ تم إرسال تنبيه اختبار بنجاح";
-  }
-}
-</script>
-
+  <script src="app.js"></script>
 </body>
 </html>
