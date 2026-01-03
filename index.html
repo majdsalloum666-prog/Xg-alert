@@ -1,17 +1,28 @@
-<!DOCTYPE html>
-<html lang="ar">
-<head>
-  <meta charset="UTF-8">
-  <title>xG Alert</title>
-</head>
-<body>
+// إعدادات التطبيق
+const MIN_MINUTE = 30;
+const MIN_XG = 1.5;
 
-  <h2>xG Alert يعمل في الخلفية</h2>
-  <p>سيتم إرسال إشعارات عند تحقق شرط xG</p>
+// لمنع تكرار الإشعارات
+const alertedMatches = new Set();
 
-  <!-- زر تفعيل الإشعارات (مهم جدًا) -->
-  <button onclick="enableAlerts()">🔔 تفعيل الإشعارات</button>
+// دالة تفعيل الإشعارات (تُستدعى من الزر)
+function enableAlerts() {
+  if (Notification.permission === "granted") {
+    sendTestNotification();
+  } else {
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        sendTestNotification();
+      } else {
+        alert("يجب السماح بالإشعارات لتعمل التنبيهات");
+      }
+    });
+  }
+}
 
-  <script src="app.js"></script>
-</body>
-</html>
+// إشعار تجريبي للتأكد أن الإشعارات تعمل
+function sendTestNotification() {
+  new Notification("⚽ تنبيه xG", {
+    body: "تم تفعيل الإشعارات بنجاح ✅"
+  });
+}
