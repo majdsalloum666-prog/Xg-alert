@@ -2,195 +2,127 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>xG Smart Alert</title>
+  <title>xG Alert – TEST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      padding-top: 20px;
+      background: #f2f2f2;
+      padding: 20px;
     }
-
-    #enableSoundBtn {
-      font-size: 18px;
-      padding: 10px 20px;
-      margin-bottom: 10px;
+    button {
+      padding: 14px 22px;
+      font-size: 16px;
+      margin-top: 20px;
+      cursor: pointer;
     }
-
     #status {
-      color: #555;
-      margin-bottom: 10px;
-    }
-
-    #alertBox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.92);
-      color: #fff;
-      z-index: 9999;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-    }
-
-    #alertBox h1 {
-      font-size: 26px;
-      margin-bottom: 8px;
-    }
-
-    #alertBox p {
-      font-size: 18px;
-      white-space: pre-line;
-      text-align: center;
-    }
-
-    #closeBtn {
-      margin-top: 16px;
-      font-size: 18px;
-      padding: 8px 20px;
+      margin-top: 20px;
+      font-size: 15px;
+      color: #333;
     }
   </style>
 </head>
 
 <body>
 
-<h2>xG Smart Alert</h2>
-<p>تنبيه ذكي عند اقتراب الهدف (إحصائيًا)</p>
+  <h2>xG Alert – Test Mode</h2>
+  <p>نسخة اختبار للتنبيهات</p>
 
-<button id="enableSoundBtn">🔊 تفعيل الصوت</button>
-<div id="status">الحالة: بانتظار تفعيل الصوت</div>
+  <button onclick="enableAlerts()">🔔 تفعيل الإشعارات</button>
 
-<div id="alertBox">
-  <h1>⚽ GOAL PROBABILITY HIGH</h1>
-  <p id="alertText"></p>
-  <button id="closeBtn">إغلاق</button>
-</div>
+  <div id="status">الحالة: لم يبدأ بعد</div>
 
-<audio id="alarmSound">
-  <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
-</audio>
+  <audio id="sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
 
 <script>
-  /* ===== الإعدادات ===== */
-  const MIN_MINUTE_XG_TOTAL = 30;
-  const MIN_TOTAL_XG = 1.4;
+/* ======================
+   إعدادات الاختبار
+====================== */
+const TEST_MATCH = {
+  home: "Arsenal",
+  away: "Bournemouth",
+  minute: 38,
+  homeXG: 1.05,
+  awayXG: 0.55,
+  homeSOT: 6,
+  awaySOT: 2
+};
 
-  const MIN_MINUTE_SOT = 25;
-  const MIN_SOT_TOTAL = 4;
-  const MIN_SOT_SINGLE = 5;
+let alerted = false;
 
-  const MIN_MINUTE_XG_SINGLE = 25;
-  const MIN_XG_SINGLE = 1.0;
-
-  const CHECK_EVERY_MS = 30000;
-
-  let alerted = false;
-  let soundEnabled = false;
-
-  const sound = document.getElementById("alarmSound");
-  const alertBox = document.getElementById("alertBox");
-  const alertText = document.getElementById("alertText");
-  const statusEl = document.getElementById("status");
-  const enableSoundBtn = document.getElementById("enableSoundBtn");
-
-  enableSoundBtn.onclick = () => {
-    sound.play().then(() => {
-      sound.pause();
-      sound.currentTime = 0;
-      soundEnabled = true;
-      statusEl.textContent = "الحالة: الصوت مفعّل – مراقبة المباريات";
-      alert("✅ تم تفعيل الصوت");
+/* ======================
+   تفعيل الإشعارات
+====================== */
+function enableAlerts() {
+  if (Notification.permission === "granted") {
+    startTest();
+  } else {
+    Notification.requestPermission().then(p => {
+      if (p === "granted") startTest();
+      else alert("يجب السماح بالإشعارات");
     });
-  };
+  }
+}
 
-  function calcXG(shotsOnTarget, dangerousAttacks) {
-    return (shotsOnTarget * 0.30) + (dangerousAttacks / 30);
+/* ======================
+   بدء الاختبار
+====================== */
+function startTest() {
+  document.getElementById("status").innerText =
+    "الحالة: اختبار قيد التشغيل (سيأتي تنبيه خلال ثوانٍ)";
+
+  setTimeout(runTest, 4000);
+}
+
+/* ======================
+   إرسال إشعار
+====================== */
+function sendNotification(title, body) {
+  new Notification(title, {
+    body,
+    icon: "https://cdn-icons-png.flaticon.com/512/861/861512.png"
+  });
+
+  document.getElementById("sound").play();
+}
+
+/* ======================
+   منطق الاختبار
+====================== */
+function runTest() {
+  if (alerted) return;
+
+  const totalXG = TEST_MATCH.homeXG + TEST_MATCH.awayXG;
+
+  let reason = "";
+
+  if (TEST_MATCH.homeXG >= 1.0) {
+    reason = "🔥 xG لفريق واحد ≥ 1.0";
+  } else if (totalXG >= 1.5) {
+    reason = "📊 xG إجمالي مرتفع";
+  } else if (TEST_MATCH.homeSOT >= 5) {
+    reason = "🎯 تسديدات على المرمى عالية";
   }
 
-  async function fetchLiveMatches() {
-    const url =
-      "https://api.allorigins.win/raw?url=https://www.sofascore.com/api/v1/sport/football/events/live";
-    const res = await fetch(url);
-    const data = await res.json();
-    return data.events || [];
+  if (reason) {
+    alerted = true;
+
+    sendNotification(
+      "⚽ xG ALERT (TEST)",
+      `${TEST_MATCH.home} vs ${TEST_MATCH.away}
+الدقيقة: ${TEST_MATCH.minute}
+${reason}
+xG: ${TEST_MATCH.homeXG} - ${TEST_MATCH.awayXG}
+Shots on Target: ${TEST_MATCH.homeSOT} - ${TEST_MATCH.awaySOT}`
+    );
+
+    document.getElementById("status").innerText =
+      "✅ تم إرسال تنبيه اختبار بنجاح";
   }
-
-  async function checkMatches() {
-    if (alerted) return;
-
-    try {
-      const events = await fetchLiveMatches();
-      statusEl.textContent = `الحالة: فحص ${events.length} مباراة حيّة`;
-
-      for (const ev of events) {
-        if (!ev.statistics) continue;
-
-        const minute = ev.time?.current || 0;
-
-        const homeSOT = ev.statistics.home?.shotsOnTarget ?? 0;
-        const awaySOT = ev.statistics.away?.shotsOnTarget ?? 0;
-        const totalSOT = homeSOT + awaySOT;
-
-        const homeDA  = ev.statistics.home?.dangerousAttacks ?? 0;
-        const awayDA  = ev.statistics.away?.dangerousAttacks ?? 0;
-
-        const xgHome = calcXG(homeSOT, homeDA);
-        const xgAway = calcXG(awaySOT, awayDA);
-        const totalXG = xgHome + xgAway;
-
-        const condXGTotal =
-          minute >= MIN_MINUTE_XG_TOTAL && totalXG >= MIN_TOTAL_XG;
-
-        const condSOTTotal =
-          minute >= MIN_MINUTE_SOT && totalSOT >= MIN_SOT_TOTAL;
-
-        const condSOTSingle =
-          minute >= MIN_MINUTE_SOT &&
-          (homeSOT >= MIN_SOT_SINGLE || awaySOT >= MIN_SOT_SINGLE);
-
-        const condXGSingle =
-          minute >= MIN_MINUTE_XG_SINGLE &&
-          (xgHome >= MIN_XG_SINGLE || xgAway >= MIN_XG_SINGLE);
-
-        if (condXGTotal || condSOTTotal || condSOTSingle || condXGSingle) {
-          alerted = true;
-
-          let reason =
-            condXGSingle
-              ? "🔥 xG لفريق واحد ≥ 1.0"
-              : condXGTotal
-              ? "📊 ضغط xG مرتفع (إجمالي)"
-              : condSOTSingle
-              ? "🎯 فريق واحد يسيطر هجوميًا"
-              : "🎯 تسديدات على المرمى مرتفعة";
-
-          alertText.innerText =
-            `${ev.homeTeam?.name} vs ${ev.awayTeam?.name}\n\n` +
-            `الدقيقة: ${minute}\n\n` +
-            `${reason}\n\n` +
-            `Shots on Target: ${homeSOT} - ${awaySOT}\n` +
-            `xG: ${xgHome.toFixed(2)} - ${xgAway.toFixed(2)}\n` +
-            `xG الإجمالي: ${totalXG.toFixed(2)}`;
-
-          alertBox.style.display = "flex";
-          if (soundEnabled) sound.play();
-          break;
-        }
-      }
-    } catch (err) {
-      statusEl.textContent = "الحالة: خطأ في جلب البيانات";
-      console.error(err);
-    }
-  }
-
-  setInterval(checkMatches, CHECK_EVERY_MS);
-
-  document.getElementById("closeBtn").onclick = () => {
-    alertBox.style.display = "none";
-    sound.pause();
-    sound.currentTime = 0;
-  };
+}
 </script>
 
 </body>
