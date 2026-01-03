@@ -2,50 +2,28 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>xG Alert</title>
-
+  <title>xG Alert – Live Stats</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 30px;
-    }
-
-    #enableSoundBtn {
-      font-size: 18px;
-      padding: 10px 20px;
-      margin-bottom: 20px;
-    }
-
+    body { font-family: Arial; text-align:center; padding-top:20px; }
+    #enableSoundBtn { font-size:18px; padding:10px 20px; margin-bottom:10px; }
+    #status { margin:10px 0; color:#555; }
     #alertBox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.9);
-      color: #fff;
-      z-index: 9999;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.9); color:#fff; z-index:9999;
+      align-items:center; justify-content:center; flex-direction:column;
     }
-
-    #alertBox h1 { font-size: 26px; }
-    #alertBox p { font-size: 18px; white-space: pre-line; }
-
-    #closeBtn {
-      margin-top: 20px;
-      font-size: 18px;
-      padding: 8px 20px;
-    }
+    #alertBox h1 { font-size:26px; margin-bottom:8px; }
+    #alertBox p { font-size:18px; white-space:pre-line; }
+    #closeBtn { margin-top:16px; font-size:18px; padding:8px 20px; }
   </style>
 </head>
-
 <body>
 
-<h2>xG Alert</h2>
+<h2>xG Alert (Live)</h2>
 <p>تنبيه تلقائي عند ضغط هجومي قوي</p>
 
-<button id="enableSoundBtn">🔊 تفعيل الصوت (اضغط بعد فتح الصفحة)</button>
+<button id="enableSoundBtn">🔊 تفعيل الصوت (بعد فتح الصفحة)</button>
+<div id="status">الحالة: بانتظار تفعيل الصوت</div>
 
 <div id="alertBox">
   <h1>⚽ xG ALERT</h1>
@@ -58,63 +36,94 @@
 </audio>
 
 <script>
+  // ===== إعدادات =====
+  const MIN_MINUTE = 30;
+  const MIN_XG = 1.5;
+  const CHECK_EVERY_MS = 30000; // كل 30 ثانية
   let alerted = false;
   let soundEnabled = false;
 
   const sound = document.getElementById("alarmSound");
   const alertBox = document.getElementById("alertBox");
   const alertText = document.getElementById("alertText");
+  const statusEl = document.getElementById("status");
   const enableSoundBtn = document.getElementById("enableSoundBtn");
 
-  // يجب الضغط عليه بعد كل فتح صفحة
+  // ===== تفعيل الصوت (لازم بعد كل فتح صفحة) =====
   enableSoundBtn.onclick = () => {
     sound.play().then(() => {
-      sound.pause();
-      sound.currentTime = 0;
+      sound.pause(); sound.currentTime = 0;
       soundEnabled = true;
-      alert("✅ الصوت مفعّل لهذه الجلسة");
+      statusEl.textContent = "الحالة: الصوت مفعّل لهذه الجلسة";
+      alert("✅ الصوت مفعّل");
     });
   };
 
-  // بيانات تجريبية
-  let minute = 32;
-  let shotsOnTargetHome = 4;
-  let shotsOnTargetAway = 3;
-  let dangerousAttacksHome = 38;
-  let dangerousAttacksAway = 31;
-
-  function calculateXG(shotsOnTarget, dangerousAttacks) {
+  // ===== حساب xG التقديري =====
+  function calcXG(shotsOnTarget, dangerousAttacks) {
     return (shotsOnTarget * 0.35) + (dangerousAttacks / 25);
   }
 
-  function checkMatch() {
-    const xgHome = calculateXG(shotsOnTargetHome, dangerousAttacksHome);
-    const xgAway = calculateXG(shotsOnTargetAway, dangerousAttacksAway);
-    const totalXG = xgHome + xgAway;
+  // ===== جلب إحصائيات حيّة (مثال مباراة واحدة) =====
+  async function fetchLiveStats() {
+    // مثال Endpoint عام عبر وسيط CORS (قد يتغير)
+    // يمكنك لاحقًا تبديل الـ URL لمصدر آخر مماثل
+    const url = "https://api.allorigins.win/raw?url=https://www.sofascore.com/api/v1/sport/football/events/live";
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.events || [];
+  }
 
-    if (!alerted && minute >= 30 && totalXG >= 1.5) {
-      alerted = true;
+  async function checkMatches() {
+    if (alerted) return;
 
-      alertText.innerText =
-        `الدقيقة: ${minute}\n` +
-        `xG الفريق الأول: ${xgHome.toFixed(2)}\n` +
-        `xG الفريق الثاني: ${xgAway.toFixed(2)}\n` +
-        `xG الإجمالي: ${totalXG.toFixed(2)}`;
+    try {
+      const events = await fetchLiveStats();
+      statusEl.textContent = `الحالة: فحص ${events.length} مباراة حيّة`;
 
-      alertBox.style.display = "flex";
+      for (const ev of events) {
+        // تأكد من وجود الإحصائيات
+        if (!ev.statistics) continue;
 
-      if (soundEnabled) {
-        sound.play();
+        const minute = ev.time?.current || 0;
+
+        // استخراج إحصائيات أساسية (قد تختلف المفاتيح)
+        const homeSOT = ev.statistics.home?.shotsOnTarget ?? 0;
+        const awaySOT = ev.statistics.away?.shotsOnTarget ?? 0;
+        const homeDA  = ev.statistics.home?.dangerousAttacks ?? 0;
+        const awayDA  = ev.statistics.away?.dangerousAttacks ?? 0;
+
+        const xgHome = calcXG(homeSOT, homeDA);
+        const xgAway = calcXG(awaySOT, awayDA);
+        const totalXG = xgHome + xgAway;
+
+        if (minute >= MIN_MINUTE && totalXG >= MIN_XG) {
+          alerted = true;
+
+          alertText.innerText =
+            `${ev.homeTeam?.name} vs ${ev.awayTeam?.name}\n` +
+            `الدقيقة: ${minute}\n` +
+            `xG الفريق الأول: ${xgHome.toFixed(2)}\n` +
+            `xG الفريق الثاني: ${xgAway.toFixed(2)}\n` +
+            `xG الإجمالي: ${totalXG.toFixed(2)}`;
+
+          alertBox.style.display = "flex";
+          if (soundEnabled) sound.play();
+          break;
+        }
       }
+    } catch (e) {
+      statusEl.textContent = "الحالة: خطأ في جلب الإحصائيات (أعد المحاولة)";
+      console.error(e);
     }
   }
 
-  setTimeout(checkMatch, 4000);
+  // تشغيل دوري
+  setInterval(checkMatches, CHECK_EVERY_MS);
 
   document.getElementById("closeBtn").onclick = () => {
     alertBox.style.display = "none";
-    sound.pause();
-    sound.currentTime = 0;
+    sound.pause(); sound.currentTime = 0;
   };
 </script>
 
