@@ -3,112 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <title>xG Alert (Live)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 40px;
-      background: #ffffff;
-    }
-    button {
-      padding: 12px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    pre {
-      white-space: pre-wrap;
-      text-align: right;
-      margin-top: 20px;
-      font-size: 15px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body>
+<body style="font-family: Arial; text-align:center; padding:40px">
 
   <h1>xG Alert (Live)</h1>
 
-  <button id="notifyBtn">🔔 تفعيل الإشعارات</button>
+  <button onclick="enableNotifications()" style="font-size:18px">
+    🔔 تفعيل الإشعارات
+  </button>
 
-  <pre id="status">الحالة: لم يبدأ بعد</pre>
+  <p id="status" style="margin-top:20px">
+    الحالة: لم يبدأ بعد
+  </p>
 
-<script>
-/* ================== إعدادات ================== */
-
-// 🔑 ضع API KEY هنا فقط (بدون مسافات)
-const API_KEY = "ab4717d800b5dd2a669908cc1aa52334";
-
-// كل كم دقيقة يتم الفحص
-const CHECK_INTERVAL_MINUTES = 10;
-
-/* ============================================= */
-
-const statusEl = document.getElementById("status");
-const btn = document.getElementById("notifyBtn");
-
-let started = false;
-
-/* طلب إذن الإشعارات */
-btn.onclick = async () => {
-  if (Notification.permission !== "granted") {
-    await Notification.requestPermission();
-  }
-  started = true;
-  statusEl.innerText = "الحالة: بدأ الفحص كل 10 دقائق ⏳";
-  checkMatches();
-  setInterval(checkMatches, CHECK_INTERVAL_MINUTES * 60 * 1000);
-};
-
-/* جلب المباريات الحيّة */
-async function checkMatches() {
-  try {
-    const res = await fetch(
-      "https://v3.football.api-sports.io/fixtures?live=all",
-      {
-        headers: {
-          "x-apisports-key": API_KEY
-        }
-      }
-    );
-
-    const data = await res.json();
-    const matches = data.response || [];
-
-    if (matches.length === 0) {
-      statusEl.innerText = "لا توجد مباريات حيّة حالياً";
-      return;
-    }
-
-    let text = "المباريات الحيّة:\n\n";
-
-    matches.forEach(match => {
-      const home = match.teams.home.name;
-      const away = match.teams.away.name;
-      const minute = match.fixture.status.elapsed ?? "?";
-
-      text += `⚽ ${home} 🆚 ${away} (د ${minute})\n`;
-
-      sendNotification(home, away, minute);
-    });
-
-    statusEl.innerText = text;
-
-  } catch (err) {
-    statusEl.innerText = "خطأ في جلب البيانات ❌";
-    console.error(err);
-  }
-}
-
-/* إرسال تنبيه */
-function sendNotification(home, away, minute) {
-  if (Notification.permission === "granted") {
-    new Notification("⚽ مباراة حيّة", {
-      body: `${home} 🆚 ${away} (الدقيقة ${minute})`,
-    });
-  }
-}
-</script>
-
+  <script src="app.js"></script>
 </body>
 </html>
