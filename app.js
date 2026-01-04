@@ -1,118 +1,127 @@
-/**********************
- * CONFIG
- **********************/
-const API_KEY = "ab4717d800b5dd2a669908cc1aa52334"; // ← ضع API KEY هنا
-const CHECK_INTERVAL = 10 * 60 * 1000; // 10 دقائق
-const API_URL = "https://v3.football.api-sports.io/fixtures?live=all";
+/***********************
+ 🔐 ضع API KEY هنا فقط
+************************/
+const API_KEY = "ab4717d800b5dd2a669908cc1aa52334";
 
-/**********************
- * STATE
- **********************/
-const alertedMatches = new Set();
+/***********************
+ ⚙️ الإعدادات
+************************/
+const CHECK_INTERVAL = 10 * 60 * 1000; // كل 10 دقائق
+const XG_TEAM_ALERT = 1.0;
+const XG_TOTAL_ALERT = 1.5;
+const SHOTS_ON_TARGET_ALERT = 5;
 
-/**********************
- * NOTIFICATIONS
- **********************/
+let alertedMatches = new Set();
+
+/***********************
+ 🔔 تفعيل الإشعارات
+************************/
 function enableNotifications() {
-  if (Notification.permission === "granted") return;
-  Notification.requestPermission();
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      document.getElementById("status").innerText = "الحالة: المراقبة بدأت";
+      checkLiveMatches();
+      setInterval(checkLiveMatches, CHECK_INTERVAL);
+    } else {
+      alert("يجب السماح بالإشعارات");
+    }
+  });
 }
 
-function sendNotification(title, body) {
-  if (Notification.permission === "granted") {
-    new Notification(title, {
-      body,
-      icon: "https://cdn-icons-png.flaticon.com/512/861/861512.png",
-      requireInteraction: true
-    });
-  }
-}
-
-/**********************
- * MAIN LOGIC
- **********************/
+/***********************
+ 📡 جلب المباريات الحية
+************************/
 async function checkLiveMatches() {
   try {
-    const res = await fetch(API_URL, {
-      headers: {
-        "x-apisports-key": API_KEY
+    const res = await fetch(
+      "https://v3.football.api-sports.io/fixtures?live=all",
+      {
+        headers: {
+          "x-apisports-key": API_KEY
+        }
       }
-    });
-
-    if (!res.ok) return;
+    );
 
     const data = await res.json();
-    const matches = data.response || [];
+    const fixtures = data.response;
 
-    if (matches.length === 0) {
-      updateStatus("لا توجد مباريات حية");
+    if (!fixtures || fixtures.length === 0) {
+      document.getElementById("status").innerText = "لا توجد مباريات حية حالياً";
       return;
     }
 
-    updateStatus(`مباريات حية: ${matches.length}`);
+    document.getElementById("status").innerText =
+      `مباريات حية: ${fixtures.length}`;
 
-    matches.forEach(match => {
-      const id = match.fixture.id;
-      if (alertedMatches.has(id)) return;
-
-      const home = match.teams.home.name;
-      const away = match.teams.away.name;
-
-      const xgHome = match.statistics
-        ?.find(s => s.team.id === match.teams.home.id)
-        ?.statistics.find(x => x.type === "Expected Goals")?.value || 0;
-
-      const xgAway = match.statistics
-        ?.find(s => s.team.id === match.teams.away.id)
-        ?.statistics.find(x => x.type === "Expected Goals")?.value || 0;
-
-      const shotsHome = match.statistics
-        ?.find(s => s.team.id === match.teams.home.id)
-        ?.statistics.find(x => x.type === "Shots on Goal")?.value || 0;
-
-      const shotsAway = match.statistics
-        ?.find(s => s.team.id === match.teams.away.id)
-        ?.statistics.find(x => x.type === "Shots on Goal")?.value || 0;
-
-      const totalXG = xgHome + xgAway;
-
-      if (
-        xgHome >= 1 ||
-        xgAway >= 1 ||
-        totalXG >= 1.5 ||
-        shotsHome >= 5 ||
-        shotsAway >= 5
-      ) {
-        alertedMatches.add(id);
-
-        sendNotification(
-          "⚽ تنبيه ضغط هجومي",
-          `${home} vs ${away}
-xG: ${xgHome} - ${xgAway}
-Shots on target: ${shotsHome} - ${shotsAway}`
-        );
-      }
-    });
+    for (const match of fixtures) {
+      await checkMatchStats(match);
+    }
 
   } catch (err) {
-    updateStatus("خطأ في الاتصال بالـ API");
+    console.error(err);
   }
 }
 
-/**********************
- * UI
- **********************/
-function updateStatus(text) {
-  const el = document.getElementById("status");
-  if (el) el.textContent = `الحالة: ${text}`;
+/***********************
+ 📊 فحص الإحصائيات
+************************/
+async function checkMatchStats(match) {
+  const fixtureId = match.fixture.id;
+  if (alertedMatches.has(fixtureId)) return;
+
+  const res = await fetch(
+    `https://v3.football.api-sports.io/fixtures/statistics?fixture=${fixtureId}`,
+    {
+      headers: {
+        "x-apisports-key": API_KEY
+      }
+    }
+  );
+
+  const data = await res.json();
+  const stats = data.response;
+  if (!stats || stats.length < 2) return;
+
+  const home = stats[0];
+  const away = stats[1];
+
+  const homeXG = getStat(home, "Expected Goals");
+  const awayXG = getStat(away, "Expected Goals");
+
+  const homeShots = getStat(home, "Shots on Target");
+  const awayShots = getStat(away, "Shots on Target");
+
+  const totalXG = homeXG + awayXG;
+
+  if (
+    homeXG >= XG_TEAM_ALERT ||
+    awayXG >= XG_TEAM_ALERT ||
+    totalXG >= XG_TOTAL_ALERT ||
+    homeShots >= SHOTS_ON_TARGET_ALERT ||
+    awayShots >= SHOTS_ON_TARGET_ALERT
+  ) {
+    sendNotification(match, homeXG, awayXG, homeShots, awayShots);
+    alertedMatches.add(fixtureId);
+  }
 }
 
-/**********************
- * START
- **********************/
-document.getElementById("enableBtn").addEventListener("click", () => {
-  enableNotifications();
-  checkLiveMatches();
-  setInterval(checkLiveMatches, CHECK_INTERVAL);
-  updateStatus("قيد التشغيل (فحص كل 10 دقائق)");
-});
+/***********************
+ 📈 استخراج القيم
+************************/
+function getStat(team, name) {
+  const stat = team.statistics.find(s => s.type === name);
+  return stat && stat.value ? Number(stat.value) : 0;
+}
+
+/***********************
+ 🔊 إرسال التنبيه
+************************/
+function sendNotification(match, hxg, axg, hs, as) {
+  const title = "⚽ فرصة هدف قوية";
+  const body =
+    `${match.teams.home.name} vs ${match.teams.away.name}\n` +
+    `xG: ${hxg} - ${axg}\n` +
+    `Shots on target: ${hs} - ${as}`;
+
+  new Notification(title, { body });
+}
